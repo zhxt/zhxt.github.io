@@ -1,0 +1,226 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  <title>Bring the Apollo&#39;s ROS indigo optimizations to ROS kinetic | </title>
+  
+  
+  <meta name="description" content="Since we konw the Apollo Team made three major optimizations to the original ROS indigo, and made it open sourced, so we can ‘easily’ port it to ROS k">
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  <meta property="og:title" content="Bring the Apollo&#39;s ROS indigo optimizations to ROS kinetic"/>
+  <meta property="og:site_name" content=""/>
+
+  
+    <meta property="og:image" content=""/>
+  
+
+  <link href="/favicon.png" rel="icon">
+  <link rel="alternate" href="/atom.xml" title="" type="application/atom+xml">
+  <link rel="stylesheet" href="/css/style.css" media="screen" type="text/css">
+  <!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+  
+
+</head>
+
+
+<body>
+  <header id="header" class="inner"><div class="alignleft">
+  <h1><a href="/"></a></h1>
+  <h2><a href="/"></a></h2>
+</div>
+<nav id="main-nav" class="alignright">
+  <ul>
+    
+      <li><a href="/">Home</a></li>
+    
+      <li><a href="/archives">Archives</a></li>
+    
+  </ul>
+  <div class="clearfix"></div>
+</nav>
+<div class="clearfix"></div>
+</header>
+  <div id="content" class="inner">
+    <div id="main-col" class="alignleft"><div id="wrapper"><article class="post">
+  
+  <div class="post-content">
+    <header>
+      
+        <div class="icon"></div>
+        <time datetime="2018-10-14T03:53:12.000Z"><a href="/2018/10/14/Bring-the-Apollo-s-ROS-indigo-optimizations-to-ROS-kinetic/">2018-10-14</a></time>
+      
+      
+  
+    <h1 class="title">Bring the Apollo&#39;s ROS indigo optimizations to ROS kinetic</h1>
+  
+
+    </header>
+    <div class="entry">
+      
+        <p>Since we konw the Apollo Team made three major optimizations to the original ROS indigo, and made it open sourced, so we can ‘easily’ port it to ROS kinetic.</p>
+<p>The three optimizations are:</p>
+<ul>
+<li>Add protobuf support</li>
+<li>Add shared memory transport</li>
+<li>Decentralization</li>
+</ul>
+<p>We start with adding protobuf support.</p>
+<h3 id="Pre-require-a-minimal-kinetic-build"><a href="#Pre-require-a-minimal-kinetic-build" class="headerlink" title="Pre-require: a minimal kinetic build."></a>Pre-require: a minimal kinetic build.</h3><p>To get a minimal kinetic build, first, create a separate workspace, generate a desktop_full version ros source list file with git format instead of tar, and select the packages we want, reduce it to kinetic-apollo-wet.git.<br>Second, clone all the sources with wstool and put them into apgit dir.</p>
+<p>copy the build.sh script from apollo-platform repo to apgit dir.</p>
+<p>Then we have our minimal kinect source tree and can be tested with ./build.sh build, fix the dependencies if you get errors untill all the packages was built successfuly.</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">mkdir kinetic-ws</span><br><span class="line">cd kinetic-ws/</span><br><span class="line">rosinstall_generator desktop_full --rosdistro kinetic --deps --wet-only &gt; kinetic-desktop-full-wet.rosinstall.git</span><br><span class="line"></span><br><span class="line">wstool init -j8 apgit kinetic-apollo-wet.git</span><br><span class="line">wstool update -j8 -t apgit</span><br><span class="line"></span><br><span class="line">#modify to add new package, eg. octomap</span><br><span class="line">wstool merge -t apgit kinetic-apollo-wet.git</span><br><span class="line">wstool update  -t apgit octomap/octomap</span><br></pre></td></tr></table></figure>
+<h3 id="Add-protobuf-patches"><a href="#Add-protobuf-patches" class="headerlink" title="Add protobuf patches"></a>Add protobuf patches</h3><ul>
+<li><ol>
+<li>add pb_msgs pb_msgs_example packages</li>
+</ol>
+</li>
+<li><ol start="2">
+<li>patch genmsg</li>
+</ol>
+</li>
+<li><ol start="3">
+<li>patch gencpp</li>
+</ol>
+</li>
+<li><ol start="4">
+<li>patch genpy</li>
+</ol>
+</li>
+<li><ol start="5">
+<li>patch roscpp_core/roscpp_traits</li>
+</ol>
+</li>
+<li><ol start="6">
+<li>patch roscpp_core/roscpp_serialization</li>
+</ol>
+</li>
+<li><ol start="7">
+<li>patch roscpp_core/cpp_common</li>
+</ol>
+</li>
+<li><ol start="8">
+<li>patch ros_comm/roscpp</li>
+</ol>
+</li>
+</ul>
+<p>After adding these patches, build with:<br>build.sh build</p>
+<h3 id="Test-with-talk-listener-example"><a href="#Test-with-talk-listener-example" class="headerlink" title="Test with talk-listener example"></a>Test with talk-listener example</h3><p>After build finished, we can test protobuf messages with the talk-listener example:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">$ source ~/playground/kinetic-ws/apgit/install/ros_x86_64/setup.bash </span><br><span class="line">$ roscore &amp;</span><br><span class="line"></span><br><span class="line">zhxt@linux-y3ek:~/playground/kinetic-ws/apgit/install/ros_x86_64/lib/pb_msgs_example$ ./pb_listener &amp;</span><br><span class="line">[2] 8781</span><br><span class="line">zhxt@linux-y3ek:~/playground/kinetic-ws/apgit/install/ros_x86_64/lib/pb_msgs_example$ ./pb_talker </span><br><span class="line">[ INFO ] [1539492583.071544874]: Hello world 0</span><br><span class="line">[ INFO ] [1539492583.171751808]: Hello world 1</span><br><span class="line">[ INFO ] [1539492583.271984640]: Hello world 2</span><br><span class="line">[ INFO ] [1539492583.371798069]: Hello world 3</span><br><span class="line">[ INFO ] [1539492583.372883499]: Time: 1539492583.371691627</span><br><span class="line">[ INFO ] [1539492583.373110708]: I heard pb short message: [Hello world 3]</span><br><span class="line">[ INFO ] [1539492583.373218430]: I get counter message: [3]</span><br><span class="line">[ INFO ] [1539492583.471748620]: Hello world 4</span><br><span class="line">[ INFO ] [1539492583.472618782]: Time: 1539492583.471656372</span><br><span class="line">[ INFO ] [1539492583.472749793]: I heard pb short message: [Hello world 4]</span><br><span class="line">[ INFO ] [1539492583.472834024]: I get counter message: [4]</span><br><span class="line">[ INFO ] [1539492583.572173081]: Hello world 5</span><br><span class="line">[ INFO ] [1539492583.572985319]: Time: 1539492583.572082529</span><br><span class="line">[ INFO ] [1539492583.573119901]: I heard pb short message: [Hello world 5]</span><br><span class="line">[ INFO ] [1539492583.573209616]: I get counter message: [5]</span><br><span class="line">[ INFO ] [1539492583.671694881]: Hello world 6</span><br><span class="line">[ INFO ] [1539492583.672237747]: Time: 1539492583.671632944</span><br><span class="line">[ INFO ] [1539492583.672302738]: I heard pb short message: [Hello world 6]</span><br><span class="line">[ INFO ] [1539492583.672340937]: I get counter message: [6]</span><br><span class="line">[ INFO ] [1539492583.771680287]: Hello world 7</span><br><span class="line">[ INFO ] [1539492583.772357171]: Time: 1539492583.771604271</span><br></pre></td></tr></table></figure>
+<h3 id="Troubleshooting"><a href="#Troubleshooting" class="headerlink" title="Troubleshooting:"></a>Troubleshooting:</h3><ul>
+<li>fix catkin_pkg dependency<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">pip uninstall catkin_pkg</span><br><span class="line">#build catkin_pkg</span><br><span class="line">PYTHONPATH=/home/zhxt/playground/kinetic-ws/apgit/install/ros_x86_64/lib/python2.7/site-packages python setup.py install --prefix=/home/zhxt/playground/kinetic-ws/apgit/install/ros_x86_64</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<p>Acturally, it’s not that easy as we think :D</p>
+<p>Stay tuned, the other two parts comes in next few days. Patches will be open when all the three parts finished.</p>
+
+      
+    </div>
+    <footer>
+      
+        
+        
+  
+  <div class="tags">
+    <a href="/tags/Apollo/">Apollo</a>, <a href="/tags/ROS/">ROS</a>, <a href="/tags/kinetic/">kinetic</a>
+  </div>
+
+        
+  <div class="addthis addthis_toolbox addthis_default_style">
+    
+      <a class="addthis_button_facebook_like" fb:like:layout="button_count"></a>
+    
+    
+      <a class="addthis_button_tweet"></a>
+    
+    
+      <a class="addthis_button_google_plusone" g:plusone:size="medium"></a>
+    
+    
+      <a class="addthis_button_pinterest_pinit" pi:pinit:layout="horizontal"></a>
+    
+    <a class="addthis_counter addthis_pill_style"></a>
+  </div>
+  <script type="text/javascript" src="//s7.addthis.com/js/300/addthis_widget.js"></script>
+
+      
+      <div class="clearfix"></div>
+    </footer>
+  </div>
+</article>
+
+
+<section id="comment">
+  <h1 class="title">Comments</h1>
+
+  
+      <div id="fb-root"></div>
+<script>
+  (function(d, s, id) {
+    var js, fjs = d.getElementsByTagName(s)[0];
+    if (d.getElementById(id)) return;
+    js = d.createElement(s); js.id = id;
+    js.src = "//connect.facebook.net/en_US/all.js#xfbml=1&appId=123456789012345";
+    fjs.parentNode.insertBefore(js, fjs);
+  }(document, 'script', 'facebook-jssdk'));
+</script>
+
+<div class="fb-comments" data-href="http://yoursite.com/2018/10/14/Bring-the-Apollo-s-ROS-indigo-optimizations-to-ROS-kinetic/index.html" data-num-posts="5" data-width="840" data-colorscheme="light"></div>
+      
+  
+</section>
+
+</div></div>
+    <aside id="sidebar" class="alignright">
+  <div class="search">
+  <form action="//google.com/search" method="get" accept-charset="utf-8">
+    <input type="search" name="q" results="0" placeholder="Search">
+    <input type="hidden" name="q" value="site:yoursite.com">
+  </form>
+</div>
+
+  
+
+  
+<div class="widget tag">
+  <h3 class="title">Tags</h3>
+  <ul class="entry">
+  
+    <li><a href="/tags/Apollo/">Apollo</a><small>1</small></li>
+  
+    <li><a href="/tags/ROS/">ROS</a><small>1</small></li>
+  
+    <li><a href="/tags/kinetic/">kinetic</a><small>1</small></li>
+  
+  </ul>
+</div>
+
+</aside>
+    <div class="clearfix"></div>
+  </div>
+  <footer id="footer" class="inner"><div class="alignleft">
+  
+  &copy; 2018 
+  
+</div>
+<div class="clearfix"></div></footer>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+  $('.fancybox').fancybox();
+})(jQuery);
+</script>
+
+</body>
+</html>
